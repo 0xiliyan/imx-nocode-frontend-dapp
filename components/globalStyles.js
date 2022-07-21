@@ -8,6 +8,7 @@ const GlobalStyles = createGlobalStyle`
         background: ${props => props.background};
         font-weight: 700;
         font-family: 'Fredoka', sans-serif;
+        font-size: ${props => props.textSize + 'px' || '12px'};
     }
     
     input, select, button, textarea {
