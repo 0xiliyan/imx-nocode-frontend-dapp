@@ -18,7 +18,6 @@ export default {
     maxMintsForUser: 1000000,
     whitelistedAddresses: [],
     depositWalletAddress: '',
-    endSaleAtDepositAmount: 0, // amount in ETH, leave this to 0 for no limit
     isMintingEnabled: false,
     whitelistOnly: false,
     backgroundColor: '#070D2B',

@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from "react";
+import React, {useState, useEffect, useRef} from "react";
 import {ethers} from "ethers";
 import styled, {css} from 'styled-components';
 import GlobalStyles from "../components/globalStyles";
@@ -6,6 +6,19 @@ import config from "../config";
 import axios from "axios";
 import Countdown from 'react-countdown';
 import {ETHTokenType, Link} from "@imtbl/imx-sdk";
+import {useDisclosure} from "@chakra-ui/hooks";
+import {
+    Drawer,
+    DrawerBody,
+    DrawerFooter,
+    DrawerHeader,
+    DrawerOverlay,
+    DrawerContent,
+    DrawerCloseButton, ChakraProvider,
+} from '@chakra-ui/react'
+import {Input} from "@chakra-ui/input";
+import {Button} from "@chakra-ui/button";
+import ConfigurationPanel from "../components/ConfigurationPanel";
 
 const ErrorMessage = styled.div`
     color: #ff0000;
@@ -48,6 +61,7 @@ const CurrentPrice = styled.div`
 `
 
 const CollectionLogo = styled.img`
+    margin: auto;
     ${props => props.width && `
         max-width: ${props.width};
     `};
@@ -98,6 +112,7 @@ const CountdownContainer = styled.div`
 `
 
 const Index = () => {
+    const [currentConfig, setCurrentConfig] = useState(config);
     const [linkSDK, setLinkSDK] = useState(null);
     const [mintsForUser, setMintsForUser] = useState(1);
     const [error, setError] = useState();
@@ -105,15 +120,15 @@ const Index = () => {
     const [signer, setSigner] = useState();
     const [signerAddress, setSignerAddress] = useState();
     const [minting, setMinting] = useState(false);
-    const [mintingEnabled, setMintingEnabled] = useState(config.isMintingEnabled);
+    const [mintingEnabled, setMintingEnabled] = useState(currentConfig.isMintingEnabled);
     const [lastMintedId, setLastMintedId] = useState(0);
     const [countdownDate, setCountdownDate] = useState('');
 
     useEffect(() => {
         checkLastMinted();
 
-        if (config.countdownDate) {
-            setCountdownDate(new Date(config.countdownDate));
+        if (currentConfig.countdownDate) {
+            setCountdownDate(new Date(currentConfig.countdownDate));
         }
     }, []);
 
@@ -124,7 +139,7 @@ const Index = () => {
     }, [countdownDate]);
 
     useEffect(() => {
-        if (lastMintedId > config.collectionSize) {
+        if (lastMintedId > currentConfig.collectionSize) {
             setMintingEnabled(false);
         }
     }, [lastMintedId]);
@@ -132,7 +147,7 @@ const Index = () => {
     const connectWallet = async (e) => {
         e.preventDefault();
 
-        if (config.mintLayer == 'l1') {
+        if (currentConfig.mintLayer == 'l1') {
             if (!window.ethereum) {
                 setError("Metamask wallet not found, please install it to continue.");
                 return;
@@ -145,7 +160,7 @@ const Index = () => {
             const signer = provider.getSigner();
             const {chainId} = await provider.getNetwork();
 
-            if (config.appNetwork == 'ropsten') {
+            if (currentConfig.appNetwork == 'ropsten') {
                 if (chainId != 3) {
                     setError('Please connect your Metamask wallet to Ropsten testnet.');
                     return;
@@ -164,14 +179,14 @@ const Index = () => {
             setSignerAddress(signerAddress);
 
             // check deposit wallet balance if we have a limit to end the sale at (presale, public sale)
-            if (config.endSaleAtDepositAmount > 0) {
-                const depositProvider = ethers.getDefaultProvider(config.appNetwork == 'ropsten' ? 'ropsten' : 'mainnet');
+            if (currentConfig.endSaleAtDepositAmount > 0) {
+                const depositProvider = ethers.getDefaultProvider(currentConfig.appNetwork == 'ropsten' ? 'ropsten' : 'mainnet');
 
-                depositProvider.getBalance(config.depositWalletAddress).then((balance) => {
+                depositProvider.getBalance(currentConfig.depositWalletAddress).then((balance) => {
                     // convert a currency unit from wei to ether
                     const balanceInEth = parseFloat(ethers.utils.formatEther(balance));
 
-                    if (balanceInEth >= config.endSaleAtDepositAmount) {
+                    if (balanceInEth >= currentConfig.endSaleAtDepositAmount) {
                         setError('Mint sale limit has been reached, all NFTs are sold out during this sale!');
                         setMintingEnabled(false);
                     }
@@ -179,7 +194,7 @@ const Index = () => {
             }
         }
         else {
-            const linkSdkUrl = config.appNetwork == 'mainnet' ? config.linkSDK : config.linkSDKRopsten;
+            const linkSdkUrl = currentConfig.appNetwork == 'mainnet' ? currentConfig.linkSDK : currentConfig.linkSDKRopsten;
             const link = new Link(linkSdkUrl);
             setLinkSDK(link);
             // we don't really need this
@@ -214,7 +229,7 @@ const Index = () => {
     const increaseMintsForUser = () => {
         const newMintsForUser = mintsForUser + 1;
 
-        if (newMintsForUser <= config.maxMintsForUser) {
+        if (newMintsForUser <= currentConfig.maxMintsForUser) {
             setMintsForUser(newMintsForUser);
         }
     }
@@ -228,26 +243,26 @@ const Index = () => {
         checkCountdownDate();
 
         if (signer && !minting) {
-            if (config.whitelistOnly && !config.whitelistedAddresses.includes(signerAddress)) {
+            if (currentConfig.whitelistOnly && !currentConfig.whitelistedAddresses.includes(signerAddress)) {
                 setError('Your address must be whitelisted to mint.');
                 return;
             }
 
-            if (localStorage.getItem(signerAddress) >= config.maxMintsForUser) {
+            if (localStorage.getItem(signerAddress) >= currentConfig.maxMintsForUser) {
                 setError('Max mint limit reached.');
                 return;
             }
 
-            if (mintsForUser <= config.maxMintsForUser) {
+            if (mintsForUser <= currentConfig.maxMintsForUser) {
                 // total mint cost in wei
-                const totalMintCost = ethers.utils.parseEther('' + (config.mintCost * mintsForUser));
+                const totalMintCost = ethers.utils.parseEther('' + (currentConfig.mintCost * mintsForUser));
 
                 setMinting(true);
 
-                if (config.mintLayer == 'l1') {
+                if (currentConfig.mintLayer == 'l1') {
                     try {
                         const tx = await signer.sendTransaction({
-                            to: config.depositWalletAddress,
+                            to: currentConfig.depositWalletAddress,
                             value: totalMintCost
                         });
 
@@ -260,7 +275,7 @@ const Index = () => {
                         setMinting(false);
 
                         if (err.code === "INSUFFICIENT_FUNDS") {
-                            setError(`Insufficient funds in wallet for minting, total cost is: ${config.mintCost * mintsForUser} ETH`);
+                            setError(`Insufficient funds in wallet for minting, total cost is: ${currentConfig.mintCost * mintsForUser} ETH`);
                         }
 
                         console.log(err.message);
@@ -270,9 +285,9 @@ const Index = () => {
                     try {
                         linkSDK.transfer([
                             {
-                                amount: config.mintCost * mintsForUser,
+                                amount: currentConfig.mintCost * mintsForUser,
                                 type: ETHTokenType.ETH,
-                                toAddress: config.depositWalletAddress,
+                                toAddress: currentConfig.depositWalletAddress,
                             }]);
 
                         setMinting(false);
@@ -290,12 +305,18 @@ const Index = () => {
     }
 
     const checkLastMinted = async () => {
-        if (config.tokenContractAddress) {
-            const url = `https://api.${config.appNetwork == 'ropsten' ? 'ropsten.' : ''}x.immutable.com/v1/mints?token_address=${config.tokenContractAddress}`;
+        if (currentConfig.tokenContractAddress) {
+            const url = `https://api.${currentConfig.appNetwork == 'ropsten' ? 'ropsten.' : ''}x.immutable.com/v1/mints?token_address=${currentConfig.tokenContractAddress}`;
             const {data} = await axios.get(url);
 
             if (data.result.length) {
-                setLastMintedId(data.result[0].token.data.token_id);
+                const newLastMintedId = data.result[0].token.data.token_id;
+                setLastMintedId(newLastMintedId);
+
+                if (newLastMintedId >= currentConfig.collectionSize) {
+                    setError('Mint sale limit has been reached, all NFTs are sold out during this sale!');
+                    setMintingEnabled(false);
+                }
             }
         }
     }
@@ -307,36 +328,45 @@ const Index = () => {
         }
     }
 
+    const updateConfig = (key, value) => {
+        const newConfig = {...currentConfig};
+        newConfig[key] = value;
+        setCurrentConfig(newConfig);
+    }
+
     return (
-        <MintContainer>
-            <GlobalStyles background={config.backgroundColor} color={config.textColor} textSizePx={config.textSize} />
-            {error && <ErrorMessage textSizePx={config.textSizePx}>{error}</ErrorMessage>}
-            <Heading textSizePx={config.textSizePx}>{config.pageHeading}</Heading>
+        <ChakraProvider>
+            <MintContainer>
+            <GlobalStyles background={currentConfig.backgroundColor} color={currentConfig.textColor} textSizePx={currentConfig.textSize} />
+            {error && <ErrorMessage textSizePx={currentConfig.textSizePx}>{error}</ErrorMessage>}
+            <Heading textSizePx={currentConfig.textSizePx}>{currentConfig.pageHeading}</Heading>
             {countdownDate &&
-                <CountdownContainer textSizePx={config.textSizePx}>
+                <CountdownContainer textSizePx={currentConfig.textSizePx}>
                     <Countdown date={countdownDate}>
                         <div>Minting is closed!</div>
                     </Countdown>
                 </CountdownContainer>
             }
-            <CollectionLogo src="/images/logo.png" width={config.logoMaxWidth} />
-            <TotalMinted textSizePx={config.textSizePx}>{lastMintedId} / {config.collectionSize}</TotalMinted>
-            <ConnectWallet textSizePx={config.textSizePx}>
+            <CollectionLogo src="/images/logo.png" width={currentConfig.logoMaxWidth} />
+            <TotalMinted textSizePx={currentConfig.textSizePx}>{lastMintedId} / {currentConfig.collectionSize}</TotalMinted>
+            <ConnectWallet textSizePx={currentConfig.textSizePx}>
                 {signerAddress ?
-                    <WalletConnected textSizePx={config.textSizePx}>{displayAddress(signerAddress)}</WalletConnected> :
-                    <ConnectWalletButton onClick={connectWallet} borderStyle={config.mintButtonBorderStyle} textSizePx={config.textSizePx} background={config.buttonBackgroundColor} color={config.buttonColor}>CONNECT WALLET</ConnectWalletButton>
+                    <WalletConnected textSizePx={currentConfig.textSizePx}>{displayAddress(signerAddress)}</WalletConnected> :
+                    <ConnectWalletButton onClick={connectWallet} borderStyle={currentConfig.mintButtonBorderStyle} textSizePx={currentConfig.textSizePx} background={currentConfig.buttonBackgroundColor} color={currentConfig.buttonColor}>CONNECT WALLET</ConnectWalletButton>
                 }
             </ConnectWallet>
-            <CurrentPrice textSizePx={config.textSizePx}>{config.currentPriceLabel} {config.mintCost} ETH</CurrentPrice>
+            <CurrentPrice textSizePx={currentConfig.textSizePx}>{currentConfig.currentPriceLabel} {currentConfig.mintCost} ETH</CurrentPrice>
             <SelectMintsForUser>
-                <RemoveMint onClick={decreaseMintsForUser} background={config.buttonBackgroundColor} color={config.buttonColor} textSizePx={config.textSizePx}>-</RemoveMint>
-                <MintsForUser textSizePx={config.textSizePx}>{mintsForUser}</MintsForUser>
-                <AddMint onClick={increaseMintsForUser} background={config.buttonBackgroundColor} color={config.buttonColor}>+</AddMint>
+                <RemoveMint onClick={decreaseMintsForUser} background={currentConfig.buttonBackgroundColor} color={currentConfig.buttonColor} textSizePx={currentConfig.textSizePx}>-</RemoveMint>
+                <MintsForUser textSizePx={currentConfig.textSizePx}>{mintsForUser}</MintsForUser>
+                <AddMint onClick={increaseMintsForUser} background={currentConfig.buttonBackgroundColor} color={currentConfig.buttonColor}>+</AddMint>
             </SelectMintsForUser>
             {mintingEnabled && signer &&
-                <MintButton onClick={mint} background={config.buttonBackgroundColor} color={config.buttonColor} borderStyle={config.mintButtonBorderStyle} textSizePx={config.textSizePx}>{config.mintButtonLabel}</MintButton>
+                <MintButton onClick={mint} background={currentConfig.buttonBackgroundColor} color={currentConfig.buttonColor} borderStyle={currentConfig.mintButtonBorderStyle} textSizePx={currentConfig.textSizePx}>{currentConfig.mintButtonLabel}</MintButton>
             }
+            <ConfigurationPanel config={currentConfig} updateConfig={updateConfig} />
         </MintContainer>
+        </ChakraProvider>
     );
 }
 
