@@ -15,6 +15,7 @@ import {useDisclosure} from "@chakra-ui/hooks";
 import {FormControl, FormHelperText, FormLabel} from "@chakra-ui/form-control";
 import {Flex, SimpleGrid} from "@chakra-ui/layout";
 import {Select} from "@chakra-ui/select";
+import axios from "axios";
 
 const StyledDrawer = styled(Drawer)`
     color: #000;
@@ -29,6 +30,23 @@ const ConfigureButton = styled(Button)`
 const ConfigurationPanel = ({config, updateConfig}) => {
     const { isOpen, onOpen, onClose } = useDisclosure();
     const btnRef = useRef(null);
+
+    const saveConfig = async () => {
+        // if (checkIsFormValid()) {
+        //     setFormHasErrors(false);
+            const response = await axios.post('/api/update-config', {config});
+
+            if (response.data.result) {
+                // setConfigSaved(true);
+                setTimeout(() => {
+                    // setConfigSaved(false);
+                }, 2000);
+            }
+        // }
+        // else {
+        //     setFormHasErrors(true);
+        // }
+    }
 
     return (
         <>
@@ -178,10 +196,10 @@ const ConfigurationPanel = ({config, updateConfig}) => {
                     </DrawerBody>
 
                     <DrawerFooter>
-                        <Button variant='outline' mr={3} onClick={onClose} color="#555">
-                            Cancel
-                        </Button>
-                        <Button colorScheme='messenger'>Save</Button>
+                        {/*<Button variant='outline' mr={3} onClick={onClose} color="#555">*/}
+                        {/*    Cancel*/}
+                        {/*</Button>*/}
+                        <Button colorScheme='messenger' onClick={saveConfig}>Save</Button>
                     </DrawerFooter>
                 </DrawerContent>
             </StyledDrawer>
