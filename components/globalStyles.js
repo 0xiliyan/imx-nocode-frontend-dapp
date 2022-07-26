@@ -4,8 +4,8 @@ const GlobalStyles = createGlobalStyle`
     body {
         margin: 0;
         padding: 0;
-        color: ${props => props.color};
-        background: ${props => props.background};
+        color: ${props => props.color} !important;
+        background: ${props => props.background} !important;
         font-weight: 700;
         font-family: 'Fredoka', sans-serif;
         font-size: ${props => props.textSize + 'px' || '12px'};

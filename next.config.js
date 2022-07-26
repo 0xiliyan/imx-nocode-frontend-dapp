@@ -6,6 +6,7 @@ const nextConfig = (phase) => {
             reactStrictMode: true,
             swcMinify: true,
             env: {
+                isConfigurable: true
             }
         }
     }
@@ -14,6 +15,7 @@ const nextConfig = (phase) => {
         reactStrictMode: true,
         swcMinify: true,
         env: {
+            isConfigurable: false
         }
     }
 }

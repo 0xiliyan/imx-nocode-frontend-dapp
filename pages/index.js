@@ -144,6 +144,16 @@ const Index = () => {
         }
     }, [lastMintedId]);
 
+    useEffect(() => {
+        setMintingEnabled(currentConfig.isMintingEnabled);
+    }, [currentConfig.isMintingEnabled]);
+
+    useEffect(() => {
+        if (lastMintedId > currentConfig.collectionSize) {
+            setMintingEnabled(false);
+        }
+    }, [lastMintedId]);
+
     const connectWallet = async (e) => {
         e.preventDefault();
 
@@ -364,7 +374,9 @@ const Index = () => {
             {mintingEnabled && signer &&
                 <MintButton onClick={mint} background={currentConfig.buttonBackgroundColor} color={currentConfig.buttonColor} borderStyle={currentConfig.mintButtonBorderStyle} textSizePx={currentConfig.textSizePx}>{currentConfig.mintButtonLabel}</MintButton>
             }
-            <ConfigurationPanel config={currentConfig} updateConfig={updateConfig} />
+            {process.env.isConfigurable ?
+                <ConfigurationPanel config={currentConfig} updateConfig={updateConfig}/> : null
+            }
         </MintContainer>
         </ChakraProvider>
     );

@@ -6,8 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "export": "next export",
-    "lint": "next lint"
+    "export": "next export"
   },
   "dependencies": {
     "@chakra-ui/modal": "^2.1.2",
@@ -19,7 +18,9 @@
     "ethers": "^5.5.1",
     "framer-motion": "^6.5.1",
     "next": "12.2.2",
+    "papaparse": "^5.3.2",
     "react": "18.2.0",
+    "react-color": "^2.19.3",
     "react-countdown": "^2.3.2",
     "react-dom": "18.2.0",
     "styled-components": "^5.3.3"

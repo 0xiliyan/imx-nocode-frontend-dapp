@@ -16,6 +16,8 @@ import {FormControl, FormHelperText, FormLabel} from "@chakra-ui/form-control";
 import {Flex, SimpleGrid} from "@chakra-ui/layout";
 import {Select} from "@chakra-ui/select";
 import axios from "axios";
+import ColorPicker from "./ui/ColorPIcker";
+import Papa from "papaparse";
 
 const StyledDrawer = styled(Drawer)`
     color: #000;
@@ -27,20 +29,28 @@ const ConfigureButton = styled(Button)`
     right: 25px;
 `
 
+const UploadCSVInput = styled.input`
+    display: none;
+`
+
 const ConfigurationPanel = ({config, updateConfig}) => {
     const { isOpen, onOpen, onClose } = useDisclosure();
+    const [isLoading, setIsLoading] = useState(false);
     const btnRef = useRef(null);
+    const uploadCSVinput = useRef(null);
 
-    const saveConfig = async () => {
+    const saveConfig = async (closeDialog = true) => {
         // if (checkIsFormValid()) {
         //     setFormHasErrors(false);
+            setIsLoading(true);
             const response = await axios.post('/api/update-config', {config});
 
             if (response.data.result) {
-                // setConfigSaved(true);
-                setTimeout(() => {
-                    // setConfigSaved(false);
-                }, 2000);
+                setIsLoading(false);
+
+                if (closeDialog) {
+                    onClose();
+                }
             }
         // }
         // else {
@@ -48,9 +58,30 @@ const ConfigurationPanel = ({config, updateConfig}) => {
         // }
     }
 
+    useEffect(() => {
+        if (config.whitelistedAddresses) {
+            saveConfig(false);
+        }
+    }, [config.whitelistedAddresses]);
+
+    const parseCSV = (file) => {
+        Papa.parse(file, {
+            header: false,
+            skipEmptyLines: true,
+            complete: function (results) {
+                let whitelistedAddresses = [];
+                results.data.forEach(row => {
+                    whitelistedAddresses.push(row[0]);
+                });
+
+                updateConfig('whitelistedAddresses', whitelistedAddresses);
+            },
+        });
+    }
+
     return (
         <>
-            <ConfigureButton onClick={onOpen} colorScheme="messenger" mr={25}>Configure Dapp</ConfigureButton>
+            <ConfigureButton onClick={onOpen} colorScheme="messenger" mr={25}>Configure Minting Dapp</ConfigureButton>
             <StyledDrawer
                 isOpen={isOpen}
                 placement='right'
@@ -58,7 +89,6 @@ const ConfigurationPanel = ({config, updateConfig}) => {
                 finalFocusRef={btnRef}
                 size="lg"
             >
-                <DrawerOverlay />
                 <DrawerContent>
                     <DrawerCloseButton color="#000" />
                     <DrawerHeader color="#000">Configure Minting Dapp</DrawerHeader>
@@ -125,46 +155,55 @@ const ConfigurationPanel = ({config, updateConfig}) => {
                                 </Select>
                             </FormControl>
                             <FormControl>
-                                <FormLabel color="#000">Whitelisted Addresses</FormLabel>
-                                <Input color="#000" onChange={(e) => updateConfig('whitelistedAddresses', e.target.value)} value={config.whitelistedAddresses.join(',')} />
-                                <FormHelperText>Enter a list of comma separated wallet addresses that will be whitelisted to mint</FormHelperText>
+                                <FormLabel color="#000">Whitelisted Addresses ({config.whitelistedAddresses.length} added)</FormLabel>
+                                <Button colorScheme='messenger' onClick={() => uploadCSVinput.current.click()}>Upload CSV</Button>
+                                <UploadCSVInput type="file" accept=".csv" ref={uploadCSVinput} onChange={e => parseCSV(e.target.files[0])} />
+                                <FormHelperText>Upload CSV file with a single column, that contains a list of IMX registered wallets (no column header necessary)</FormHelperText>
                             </FormControl>
                         </SimpleGrid>
                         <SimpleGrid columns={2} spacing={10} mb={5}>
                             <FormControl>
-                                <FormLabel color="#000">Page Background Color (HEX)</FormLabel>
-                                <Input color="#000" onChange={(e) => updateConfig('backgroundColor', e.target.value)} value={config.backgroundColor} />
+                                <FormLabel color="#000">Page Background Color</FormLabel>
+                                <ColorPicker
+                                    color={config.backgroundColor}
+                                    onChangeComplete={hexColor => updateConfig('backgroundColor', hexColor)}
+                                />
                             </FormControl>
                             <FormControl>
-                                <FormLabel color="#000">Page Text Color (HEX)</FormLabel>
-                                <Input color="#000" onChange={(e) => updateConfig('textColor', e.target.value)} value={config.textColor} />
+                                <FormLabel color="#000">Page Text Color</FormLabel>
+                                <ColorPicker
+                                    color={config.textColor}
+                                    onChangeComplete={hexColor => updateConfig('textColor', hexColor)}
+                                />
                             </FormControl>
                         </SimpleGrid>
                         <SimpleGrid columns={2} spacing={10} mb={5}>
                             <FormControl>
-                                <FormLabel color="#000">Button Background Color (HEX)</FormLabel>
-                                <Input color="#000" onChange={(e) => updateConfig('buttonBackgroundColor', e.target.value)} value={config.buttonBackgroundColor} />
+                                <FormLabel color="#000">Button Background Color</FormLabel>
+                                <ColorPicker
+                                    color={config.buttonBackgroundColor}
+                                    onChangeComplete={hexColor => updateConfig('buttonBackgroundColor', hexColor)}
+                                />
                             </FormControl>
                             <FormControl>
-                                <FormLabel color="#000">Button Color (HEX)</FormLabel>
-                                <Input color="#000" onChange={(e) => updateConfig('buttonColor', e.target.value)} value={config.buttonColor} />
+                                <FormLabel color="#000">Button Text Color</FormLabel>
+                                <ColorPicker
+                                    color={config.buttonColor}
+                                    onChangeComplete={hexColor => updateConfig('buttonColor', hexColor)}
+                                />
                             </FormControl>
                         </SimpleGrid>
                         <SimpleGrid columns={2} spacing={10} mb={5}>
                             <FormControl>
                                 <FormLabel color="#000">Base Text Size (px)</FormLabel>
-                                <Input color="#000" onChange={(e) => updateConfig('textSizePx', e.target.value)} value={config.textSizePx} />
+                                <Input type="number" color="#000" onChange={(e) => updateConfig('textSizePx', e.target.value)} value={config.textSizePx} />
                             </FormControl>
-                            <FormControl>
-                                <FormLabel color="#000">Logo Max Width (px)</FormLabel>
-                                <Input color="#000" onChange={(e) => updateConfig('logoMaxWidth', e.target.value)} value={config.logoMaxWidth} />
-                            </FormControl>
-                        </SimpleGrid>
-                        <SimpleGrid columns={2} spacing={10} mb={5}>
                             <FormControl>
                                 <FormLabel color="#000">Page Heading</FormLabel>
                                 <Input color="#000" onChange={(e) => updateConfig('pageHeading', e.target.value)} value={config.pageHeading} />
                             </FormControl>
+                        </SimpleGrid>
+                        <SimpleGrid columns={2} spacing={10} mb={5}>
                             <FormControl>
                                 <FormLabel color="#000">Logo Max Width (px)</FormLabel>
                                 <Input color="#000" onChange={(e) => updateConfig('logoMaxWidth', e.target.value)} value={config.logoMaxWidth} />
@@ -199,7 +238,7 @@ const ConfigurationPanel = ({config, updateConfig}) => {
                         {/*<Button variant='outline' mr={3} onClick={onClose} color="#555">*/}
                         {/*    Cancel*/}
                         {/*</Button>*/}
-                        <Button colorScheme='messenger' onClick={saveConfig}>Save</Button>
+                        <Button colorScheme='messenger' onClick={saveConfig} isLoading={isLoading}>Save</Button>
                     </DrawerFooter>
                 </DrawerContent>
             </StyledDrawer>
