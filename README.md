@@ -1,4 +1,4 @@
-## IMX No-code Minting Frontend Dapp
+## IMX No-code Minting Frontend Dapp ![](public/images/imx-logo.png)
 
 &nbsp;
 
